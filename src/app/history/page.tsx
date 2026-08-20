@@ -32,6 +32,7 @@ const ALL_MODELS = [
   'seedream-5.0-pro',
   'seedream-5.0-lite',
   'doubao-seedream-4-5-251128',
+  'nano-banana-2',
 ];
 
 function localTime(ts: number) {

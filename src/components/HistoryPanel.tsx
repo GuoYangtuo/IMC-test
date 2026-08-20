@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { History, CheckCircle, XCircle, Loader2, Coins, AlertCircle, X } from 'lucide-react';
+import { History, CheckCircle, XCircle, Loader2, Coins, AlertCircle, X, Trash2 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { getModelInfo } from '@/lib/models';
 import { formatDuration, formatCost, formatTokens } from '@/lib/utils';
@@ -163,7 +163,23 @@ export function HistoryPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const historyVersion = useStore((s) => s.historyVersion);
+  const bumpHistoryVersion = useStore((s) => s.bumpHistoryVersion);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this run? This cannot be undone.')) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/runs/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      bumpHistoryVersion();
+    } catch (e: any) {
+      alert(`Failed to delete: ${e.message}`);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -208,7 +224,7 @@ export function HistoryPanel() {
             const date = new Date(run.timestamp);
             const timeStr = `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
             return (
-              <div key={run.id} className="border border-gray-200 rounded-lg bg-white overflow-hidden">
+              <div key={run.id} className="relative border border-gray-200 rounded-lg bg-white overflow-hidden">
                 <div className="flex items-center gap-3 px-3 py-2.5">
                   <History className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -229,6 +245,21 @@ export function HistoryPanel() {
                     <p className="text-xs text-gray-600 truncate mt-0.5">{run.prompt || '(no prompt)'}</p>
                   </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleDelete(run.id)}
+                  disabled={deletingId === run.id}
+                  className="absolute top-2 right-2 p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Delete this run"
+                  title="Delete this run"
+                >
+                  {deletingId === run.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5" />
+                  )}
+                </button>
 
                 <div className="border-t border-gray-200 p-3 bg-gray-50/50 space-y-3">
                   {run.results.length === 0 ? (

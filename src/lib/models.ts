@@ -32,9 +32,16 @@ export const MODELS: ModelInfo[] = [
   {
     id: 'gpt-image-2.0',
     name: 'GPT Image 2.0',
-    provider: 'openai',
-    providerName: 'OpenAI',
-    description: 'OpenAI\'s latest image generation model with high fidelity',
+    provider: 'openrouter',
+    providerName: 'OpenRouter',
+    description: 'OpenAI\'s latest image generation model via OpenRouter',
+  },
+  {
+    id: 'nano-banana-2',
+    name: 'Nano Banana 2',
+    provider: 'openrouter',
+    providerName: 'OpenRouter (Google)',
+    description: 'Gemini 3.1 Flash Image — fast, cost-efficient image generation',
   },
 ];
 

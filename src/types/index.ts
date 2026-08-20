@@ -1,12 +1,13 @@
 // Model Types
-export type ModelProvider = 'bytedance' | 'alibaba' | 'openai';
+export type ModelProvider = 'bytedance' | 'alibaba' | 'openai' | 'openrouter';
 
 export type ModelId =
   | 'seedream-5.0-pro'
   | 'seedream-5.0-lite'
   | 'doubao-seedream-4-5-251128'
   | 'qwen-image-3.0-pro'
-  | 'gpt-image-2.0';
+  | 'gpt-image-2.0'
+  | 'nano-banana-2';
 
 export interface ModelInfo {
   id: ModelId;
