@@ -25,9 +25,9 @@ export const MODELS: ModelInfo[] = [
   {
     id: 'qwen-image-3.0-pro',
     name: 'Qwen Image 3.0 Pro',
-    provider: 'alibaba',
-    providerName: 'Alibaba Cloud',
-    description: 'Alibaba\'s advanced image generation model with strong comprehension',
+    provider: 'openrouter',
+    providerName: 'OpenRouter (Qwen)',
+    description: 'Qwen Image 3.0 Pro via OpenRouter — text and detail rendering down to ~10px',
   },
   {
     id: 'gpt-image-2.0',

@@ -41,7 +41,9 @@ async function callQwenImage(options: CallOptions & { model: string }): Promise<
 
   try {
     // International endpoint (Singapore region) — works with sk-ws-H.* keys
-    const baseUrl = 'https://dashscope.aliyuncs.com/api/v1';
+    // Override via DASHSCOPE_BASE_URL env var to point at another region
+    // (e.g. US-Virginia: https://dashscope-us.aliyuncs.com/api/v1).
+    const baseUrl = (process.env.DASHSCOPE_BASE_URL || 'https://dashscope.aliyuncs.com/api/v1').replace(/\/$/, '');
 
     // Build messages content
     const content: Array<{ image?: string; text?: string }> = [];

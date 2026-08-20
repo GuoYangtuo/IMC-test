@@ -12,6 +12,10 @@ export async function callNanoBanana2(options: CallOptions): Promise<CallRespons
   return callOpenRouterImage(options, 'google/gemini-3.1-flash-image');
 }
 
+export async function callQwenImage3Pro(options: CallOptions): Promise<CallResponse> {
+  return callOpenRouterImage(options, 'qwen/qwen-image-3-pro');
+}
+
 async function callOpenRouterImage(options: CallOptions, modelSlug: string): Promise<CallResponse> {
   const apiKey = options.apiKey || process.env.OPENROUTER_API_KEY;
 

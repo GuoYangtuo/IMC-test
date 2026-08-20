@@ -10,6 +10,6 @@ export async function GET() {
 
   return NextResponse.json({
     models,
-    providers: ['bytedance', 'alibaba', 'openai'],
+    providers: ['bytedance', 'openrouter'],
   });
 }

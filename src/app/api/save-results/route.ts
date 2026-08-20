@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import axios from 'axios';
 import type { ModelResult } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -13,13 +14,30 @@ interface SavePayload {
 }
 
 async function fetchImageAsBuffer(url: string): Promise<{ buffer: Buffer; ext: string }> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Failed to fetch image: ${response.status} ${url}`);
-
-  const contentType = response.headers.get('content-type') ?? '';
-  const ext = contentType.includes('png') ? 'png' : 'jpg';
-  const arrayBuffer = await response.arrayBuffer();
-  return { buffer: Buffer.from(arrayBuffer), ext };
+  const maxAttempts = 3;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await axios.get<ArrayBuffer>(url, {
+        responseType: 'arraybuffer',
+        timeout: 30000,
+        // Treat 4xx/5xx as errors so we don't save a 1KB error page as the image
+        validateStatus: (s) => s >= 200 && s < 300,
+      });
+      const contentType = String(response.headers?.['content-type'] ?? '');
+      const ext = contentType.includes('png') ? 'png' : 'jpg';
+      return { buffer: Buffer.from(response.data), ext };
+    } catch (err) {
+      lastErr = err;
+      // Only retry on transient network errors; bail on 4xx
+      const status = (err as any)?.response?.status;
+      if (status && status >= 400 && status < 500) break;
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 500 * attempt));
+      }
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 export async function POST(request: NextRequest) {

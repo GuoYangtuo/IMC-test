@@ -1,7 +1,6 @@
 import type { CallOptions, CallResponse, ModelService } from './types';
 import { callSeedreamPro, callSeedreamLite, callSeedream45 } from './bytedance';
-import { callQwenImagePro } from './alibaba';
-import { callGPTImage2, callNanoBanana2 } from './openrouter';
+import { callGPTImage2, callNanoBanana2, callQwenImage3Pro } from './openrouter';
 import type { ModelId } from '@/types';
 
 // Adapter to wrap the legacy service signatures into the new ModelService interface
@@ -33,7 +32,7 @@ function adaptService(fn: (req: any, config: any) => Promise<any>): ModelService
 const seedreamProService: ModelService = async (options) => callSeedreamPro(options);
 const seedreamLiteService: ModelService = async (options) => callSeedreamLite(options);
 const seedream45Service: ModelService = async (options) => callSeedream45(options);
-const qwenImageService: ModelService = async (options) => callQwenImagePro(options);
+const qwenImageService: ModelService = async (options) => callQwenImage3Pro(options);
 const gptImageService: ModelService = async (options) => callGPTImage2(options);
 const nanoBananaService: ModelService = async (options) => callNanoBanana2(options);
 
@@ -47,6 +46,5 @@ export const MODEL_SERVICES: Record<ModelId, ModelService> = {
 };
 
 export { callSeedreamPro, callSeedreamLite, callSeedream45 } from './bytedance';
-export { callQwenImagePro, callQwenImageProSync } from './alibaba';
-export { callGPTImage2, callNanoBanana2 } from './openrouter';
+export { callGPTImage2, callNanoBanana2, callQwenImage3Pro } from './openrouter';
 export type { CallOptions, CallResponse, ModelService } from './types';
