@@ -18,12 +18,33 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  background: #ffffff;
+  margin: 0;
+  padding: 0;
+}
+
+/* Make form controls inherit colors reliably across browsers */
+input,
+textarea,
+select,
+button {
+  color: inherit;
+}
+
+textarea,
+input[type='text'],
+input[type='search'],
+input[type='email'],
+input[type='url'] {
+  background-color: #ffffff;
+  color: #111827; /* gray-900 */
+  caret-color: #111827;
+}
+
+textarea::placeholder,
+input::placeholder {
+  color: #9ca3af; /* gray-400 */
+  opacity: 1;
 }
 
 @layer utilities {
@@ -32,6 +53,7 @@ body {
   }
 }
 
+/* Full-page dropzone (unused but kept for compatibility) */
 .dropzone {
   @apply border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-colors;
 }
@@ -39,6 +61,11 @@ body {
 .dropzone:hover,
 .dropzone.active {
   @apply border-primary-500 bg-primary-50;
+}
+
+/* Compact dropzone for left sidebar */
+.dropzone-mini {
+  @apply border border-dashed border-gray-300 rounded-lg text-center cursor-pointer transition-colors;
 }
 
 .model-card {

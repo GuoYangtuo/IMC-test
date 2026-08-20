@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { ImageItem, ModelId, ModelResult } from '@/types';
 
 interface AppState {
@@ -21,7 +22,17 @@ interface AppState {
   // Results
   results: ModelResult[];
   setResults: (results: ModelResult[]) => void;
+  upsertResult: (result: ModelResult) => void;
   clearResults: () => void;
+
+  // Pending models (currently in flight)
+  pendingModels: ModelId[];
+  setPendingModels: (ids: ModelId[]) => void;
+  removePendingModel: (id: ModelId) => void;
+
+  // Selection order — fixed list set at run start so results always render in model selection order
+  selectionOrder: ModelId[];
+  setSelectionOrder: (ids: ModelId[]) => void;
 
   // Loading State
   isLoading: boolean;
@@ -33,50 +44,103 @@ interface AppState {
   removeRunningModel: (modelId: ModelId) => void;
 }
 
-export const useStore = create<AppState>((set) => ({
-  // Images
-  images: [],
-  addImage: (image) =>
-    set((state) => ({ images: [...state.images, image] })),
-  removeImage: (id) =>
-    set((state) => ({ images: state.images.filter((img) => img.id !== id) })),
-  clearImages: () => set({ images: [] }),
+const DEFAULT_MODELS: ModelId[] = [
+  'seedream-5.0-pro',
+  'seedream-5.0-lite',
+  'qwen-image-3.0-pro',
+  'gpt-image-2.0',
+];
 
-  // Prompt
-  prompt: '',
-  setPrompt: (prompt) => set({ prompt }),
+export const useStore = create<AppState>()(
+  persist(
+    (set) => ({
+      // Images
+      images: [],
+      addImage: (image) =>
+        set((state) => ({ images: [...state.images, image] })),
+      removeImage: (id) =>
+        set((state) => ({ images: state.images.filter((img) => img.id !== id) })),
+      clearImages: () => set({ images: [] }),
 
-  // Selected Models
-  selectedModels: ['seedream-5.0-pro', 'seedream-5.0-lite', 'qwen-image-3.0-pro', 'gpt-image-2.0'],
-  toggleModel: (modelId) =>
-    set((state) => ({
-      selectedModels: state.selectedModels.includes(modelId)
-        ? state.selectedModels.filter((id) => id !== modelId)
-        : [...state.selectedModels, modelId],
-    })),
-  selectAllModels: () =>
-    set({
-      selectedModels: ['seedream-5.0-pro', 'seedream-5.0-lite', 'qwen-image-3.0-pro', 'gpt-image-2.0'],
+      // Prompt
+      prompt: '',
+      setPrompt: (prompt) => set({ prompt }),
+
+      // Selected Models
+      selectedModels: DEFAULT_MODELS,
+      toggleModel: (modelId) =>
+        set((state) => ({
+          selectedModels: state.selectedModels.includes(modelId)
+            ? state.selectedModels.filter((id) => id !== modelId)
+            : [...state.selectedModels, modelId],
+        })),
+      selectAllModels: () => set({ selectedModels: DEFAULT_MODELS }),
+      deselectAllModels: () => set({ selectedModels: [] }),
+
+      // Results
+      results: [],
+      setResults: (results) => set({ results }),
+      upsertResult: (result) =>
+        set((state) => {
+          const idx = state.results.findIndex((r) => r.modelId === result.modelId);
+          if (idx >= 0) {
+            const next = state.results.slice();
+            next[idx] = result;
+            return { results: next };
+          }
+          return { results: [...state.results, result] };
+        }),
+      clearResults: () => set({ results: [] }),
+
+      // Pending models
+      pendingModels: [],
+      setPendingModels: (ids) => set({ pendingModels: ids }),
+      removePendingModel: (id) =>
+        set((state) => ({ pendingModels: state.pendingModels.filter((m) => m !== id) })),
+
+      // Selection order
+      selectionOrder: [],
+      setSelectionOrder: (ids) => set({ selectionOrder: ids }),
+
+      // Loading State
+      isLoading: false,
+      setIsLoading: (loading) => set({ isLoading: loading }),
+
+      // Running Models
+      runningModels: [],
+      addRunningModel: (modelId) =>
+        set((state) => ({ runningModels: [...state.runningModels, modelId] })),
+      removeRunningModel: (modelId) =>
+        set((state) => ({
+          runningModels: state.runningModels.filter((id) => id !== modelId),
+        })),
     }),
-  deselectAllModels: () => set({ selectedModels: [] }),
-
-  // Results
-  results: [],
-  setResults: (results) => set({ results }),
-  clearResults: () => set({ results: [] }),
-
-  // Loading State
-  isLoading: false,
-  setIsLoading: (loading) => set({ isLoading: loading }),
-
-  // Running Models
-  runningModels: [],
-  addRunningModel: (modelId) =>
-    set((state) => ({
-      runningModels: [...state.runningModels, modelId],
-    })),
-  removeRunningModel: (modelId) =>
-    set((state) => ({
-      runningModels: state.runningModels.filter((id) => id !== modelId),
-    })),
-}));
+    {
+      name: 'imc-test-store',
+      storage: createJSONStorage(() => localStorage),
+      // Only persist user-facing inputs — drop transient run state and File
+      // references that can't be (de)serialized.
+      partialize: (state) => ({
+        images: state.images.map((img) => ({
+          id: img.id,
+          url: img.url,
+          base64: img.base64,
+          // `file` (File instance) is intentionally dropped — base64 is enough.
+        })),
+        prompt: state.prompt,
+        selectedModels: state.selectedModels,
+      }),
+      // After rehydration, regenerate blob URLs from base64 so thumbnails
+      // still render after a refresh.
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.images = state.images.map((img) => {
+          if (!img.url && img.base64) {
+            return { ...img, url: img.base64 };
+          }
+          return img;
+        });
+      },
+    }
+  )
+);

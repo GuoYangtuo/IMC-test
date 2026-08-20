@@ -1,166 +1,132 @@
 import axios from 'axios';
+import type { CallOptions, CallResponse } from './types';
 
-// Alibaba Cloud Qwen Image API Service
-
-interface AlibabaConfig {
-  apiKey: string;
-  region: string;
-}
+// Alibaba Cloud DashScope Qwen Image 3.0 API Service
+// Endpoint: https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation
+// Region: International (Singapore) with dashscope.aliyuncs.com base URL
 
 interface QwenImageRequest {
-  prompt: string;
-  images: string[]; // Base64 encoded images
+  model: string;
+  input: {
+    messages: Array<{
+      role: string;
+      content: Array<{ image?: string; text?: string }>;
+    }>;
+  };
+  parameters?: {
+    size?: string;
+    n?: number;
+    prompt_extend?: boolean;
+    watermark?: boolean;
+    seed?: number;
+    output_size?: string;
+  };
 }
 
-export async function callQwenImagePro(
-  request: QwenImageRequest,
-  config: AlibabaConfig
-): Promise<{ imageUrl?: string; error?: string; tokens?: { input: number; output: number } }> {
+export async function callQwenImagePro(options: CallOptions): Promise<CallResponse> {
+  return callQwenImage({
+    ...options,
+    model: 'qwen-image-3.0-pro',
+  });
+}
+
+export async function callQwenImageProSync(options: CallOptions): Promise<CallResponse> {
+  return callQwenImagePro(options);
+}
+
+async function callQwenImage(options: CallOptions & { model: string }): Promise<CallResponse> {
+  const { images, prompt, model, apiKey } = options;
+
   try {
+    // International endpoint (Singapore region) — works with sk-ws-H.* keys
     const baseUrl = 'https://dashscope.aliyuncs.com/api/v1';
-    
-    const response = await axios.post(
-      `${baseUrl}/services/aigc/text2image/image-synthesis`,
-      {
-        model: 'qwen-vl-plus',
-        input: {
-          prompt: request.prompt,
-          images: request.images,
-        },
-        parameters: {
-          size: '1024*1024',
-          n: 1,
-        },
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${config.apiKey}`,
-          'X-DashScope-Async': 'disable',
-        },
-      }
-    );
 
-    if (response.data.output?.image_url) {
-      return {
-        imageUrl: response.data.output.image_url,
-        tokens: {
-          input: response.data.usage?.input_tokens || Math.ceil(request.prompt.length / 3) + 100,
-          output: response.data.usage?.output_tokens || 100,
-        },
-      };
-    }
+    // Build messages content
+    const content: Array<{ image?: string; text?: string }> = [];
 
-    // Check for async job
-    if (response.data.output?.task_id) {
-      const taskId = response.data.output.task_id;
-      // Poll for result
-      const result = await pollQwenImageResult(taskId, config);
-      return result;
-    }
-
-    return {
-      error: response.data.error?.message || 'No image URL in response',
-    };
-  } catch (error: any) {
-    if (error.response?.data?.error?.message) {
-      return { error: error.response.data.error.message };
-    }
-    return { error: error.message || 'Request failed' };
-  }
-}
-
-async function pollQwenImageResult(
-  taskId: string,
-  config: AlibabaConfig
-): Promise<{ imageUrl?: string; error?: string; tokens?: { input: number; output: number } }> {
-  const maxRetries = 30;
-  const retryDelay = 2000;
-  const baseUrl = 'https://dashscope.aliyuncs.com/api/v1';
-
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      const response = await axios.get(
-        `${baseUrl}/tasks/${taskId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${config.apiKey}`,
-          },
+    // For image editing (I2I), prepend images before text
+    if (images && images.length > 0) {
+      for (const img of images) {
+        if (img.base64) {
+          // Format: data:{mime};base64,{data} — the API supports this
+          content.push({ image: img.base64 });
+        } else if (img.url && !img.url.startsWith('blob:')) {
+          content.push({ image: img.url });
+        } else {
+          return {
+            success: false,
+            error: 'Image base64 data missing — please re-upload the image.',
+          };
         }
-      );
-
-      const status = response.data.output?.task_status;
-      
-      if (status === 'SUCCEEDED') {
-        return {
-          imageUrl: response.data.output?.results?.[0]?.image_url,
-          tokens: {
-            input: response.data.usage?.input_tokens || 0,
-            output: response.data.usage?.output_tokens || 0,
-          },
-        };
-      } else if (status === 'FAILED') {
-        return {
-          error: response.data.output?.error?.message || 'Task failed',
-        };
       }
-
-      // Wait before next poll
-      await new Promise((resolve) => setTimeout(resolve, retryDelay));
-    } catch (error) {
-      // Continue polling
     }
-  }
 
-  return { error: 'Task polling timeout' };
-}
+    // Always include the text prompt
+    content.push({ text: prompt });
 
-// Alternative: Direct image generation without async
-export async function callQwenImageProSync(
-  request: QwenImageRequest,
-  config: AlibabaConfig
-): Promise<{ imageUrl?: string; error?: string; tokens?: { input: number; output: number } }> {
-  try {
-    const baseUrl = 'https://dashscope.aliyuncs.com/api/v1';
-    
-    const response = await axios.post(
-      `${baseUrl}/services/aigc/text2image/image-synthesis`,
-      {
-        model: 'qwen-vl-max',
-        input: {
-          prompt: request.prompt,
-        },
-        parameters: {
-          size: '1024*1024',
-          n: 1,
-        },
+    const requestBody: QwenImageRequest = {
+      model,
+      input: {
+        messages: [
+          {
+            role: 'user',
+            content,
+          },
+        ],
       },
+      parameters: {
+        n: 1,
+        prompt_extend: true,
+        watermark: false,
+      },
+    };
+
+    const response = await axios.post(
+      `${baseUrl}/services/aigc/multimodal-generation/generation`,
+      requestBody,
       {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${config.apiKey}`,
+          Authorization: `Bearer ${apiKey || process.env.DASHSCOPE_API_KEY || process.env.ALIBABA_API_KEY}`,
         },
-        timeout: 120000,
+        timeout: 180000,
       }
     );
 
-    if (response.data.output?.image_url) {
+    // Correct response path for qwen-image-3.0-pro
+    // { output: { choices: [{ message: { content: [{ image: "url" }] } }] } }
+    const imageUrl =
+      response.data?.output?.choices?.[0]?.message?.content?.[0]?.image;
+
+    if (imageUrl) {
       return {
-        imageUrl: response.data.output.image_url,
-        tokens: {
-          input: response.data.usage?.input_tokens || Math.ceil(request.prompt.length / 3) + 100,
-          output: response.data.usage?.output_tokens || 100,
+        success: true,
+        imageUrl,
+        tokenUsage: {
+          inputTokens: response.data.usage?.input_tokens || estimateTokens(prompt, images?.length || 0),
+          outputTokens: response.data.usage?.output_tokens || 100,
+          totalTokens: response.data.usage?.total_tokens || 0,
         },
+        raw: response.data,
       };
     }
 
     return {
-      error: response.data.error?.message || 'No image URL in response',
+      success: false,
+      error: 'No image URL in response',
     };
   } catch (error: any) {
-    if (error.response?.data?.error?.message) {
-      return { error: error.response.data.error.message };
+    const message =
+      error.response?.data?.message ||
+      error.response?.data?.error?.message ||
+      error.response?.data?.code;
+    if (message) {
+      return { success: false, error: `${message} (${error.response?.status || 'no status'})` };
     }
-    return { error: error.message || 'Request failed' };
+    return { success: false, error: error.message || 'Qwen Image request failed' };
   }
+}
+
+function estimateTokens(prompt: string, imageCount: number): number {
+  return Math.ceil(prompt.length / 3) + imageCount * 85 + 50;
 }

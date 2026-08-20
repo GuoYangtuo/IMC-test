@@ -7,18 +7,16 @@ export function PromptInput() {
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-gray-700">
+      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
         Prompt
-      </label>
+      </p>
       <textarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Enter your image generation prompt..."
-        className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+        placeholder="Describe the image to generate..."
+        rows={3}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 text-sm resize-none outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500"
       />
-      <p className="text-sm text-gray-500">
-        Describe what you want to generate or modify in the image.
-      </p>
     </div>
   );
 }

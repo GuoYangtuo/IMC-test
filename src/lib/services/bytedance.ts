@@ -1,193 +1,141 @@
 import axios from 'axios';
-import crypto from 'crypto';
+import type { CallOptions, CallResponse } from './types';
 
-// ByteDance Volcengine Seedream API Service
-
-interface VolcConfig {
-  accessKey: string;
-  secretKey: string;
-  region: string;
-}
+// ByteDance Volcengine Ark — cn-beijing region (国内账户在国内 control panel 创建 key)
+const BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
 
 interface SeedreamRequest {
+  model: string;
   prompt: string;
-  images: string[]; // Base64 encoded images
+  image?: string; // Base64/data-URI or public URL for image editing
+  size?: string; // "1K" | "2K" | "3K" | "4K"
+  output_format?: 'png' | 'jpeg';
+  response_format?: 'url' | 'b64_json';
+  watermark?: boolean;
 }
 
-interface SeedreamResponse {
-  image_url?: string;
-  error?: string;
-  request_id?: string;
+export async function callSeedreamPro(options: CallOptions): Promise<CallResponse> {
+  return callSeedream({
+    ...options,
+    model: 'doubao-seedream-5-0-260128',
+    size: '2K',
+  });
 }
 
-function signRequest(
-  method: string,
-  path: string,
-  headers: Record<string, string>,
-  queries: Record<string, string>,
-  body: string,
-  secretKey: string
-): string {
-  const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
-  const signedHeaders = 'content-type;host;x-date';
-  
-  const bodyHash = crypto.createHash('sha256').update(body || '').digest('hex');
-  
-  const canonicalRequest = [
-    method,
-    path,
-    Object.entries(queries).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&'),
-    `content-type:${headers['content-type']}\nhost:${headers['host']}\nx-date:${headers['x-date']}`,
-    signedHeaders,
-    bodyHash,
-  ].join('\n');
-
-  const credentialScope = `${date}/cn-north-1/image_gen/request`;
-  const stringToSign = [
-    'HMAC-SHA256',
-    headers['x-date'],
-    credentialScope,
-    crypto.createHash('sha256').update(canonicalRequest).digest('hex'),
-  ].join('\n');
-
-  const signingKey = `HMAC-SHA256\n${date}\n${credentialScope}\n${stringToSign}`;
-  const signature = crypto.createHmac('sha256', secretKey).update(signingKey).digest('hex');
-
-  return `HMAC-SHA256 Credential=${secretKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+export async function callSeedreamLite(options: CallOptions): Promise<CallResponse> {
+  return callSeedream({
+    ...options,
+    model: 'doubao-seedream-5-0-lite-260128',
+    size: '2K',
+  });
 }
 
-export async function callSeedreamPro(
-  request: SeedreamRequest,
-  config: VolcConfig
-): Promise<{ imageUrl?: string; error?: string; tokens?: { input: number; output: number } }> {
-  const startTime = Date.now();
-  
+async function callSeedream(
+  options: CallOptions & { model: string; size?: string }
+): Promise<CallResponse> {
+  const { images, prompt, model, size, apiKey } = options;
+
   try {
-    const host = 'visual.volcengineapi.com';
-    const path = '/api/v1/seedream5.0/pro';
-    const region = config.region || 'cn-beijing';
-
-    const now = new Date();
-    const xDate = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const body = JSON.stringify({
-      model: 'seedream5.0-pro',
-      prompt: request.prompt,
-      image_urls: request.images,
-      aspect_ratio: '1:1',
-      return_url: true,
-    });
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      Host: host,
-      'X-Date': xDate,
+    const requestBody: SeedreamRequest = {
+      model,
+      prompt,
+      response_format: 'url',
+      watermark: false,
+      output_format: 'png',
     };
 
-    const queries: Record<string, string> = {
-      Action: 'Seedream5.0Pro',
-      Version: '2024-01-01',
-    };
+    if (size) {
+      requestBody.size = size;
+    }
 
-    const signature = signRequest('POST', path, headers, queries, body, config.secretKey);
-    const authHeader = `HMAC-SHA256 Credential=${config.accessKey}/${region}/image_gen/request, SignedHeaders=content-type;host;x-date, Signature=${signature}`;
+    // For image editing (I2I), pass the image as `image` field
+    if (images && images.length > 0) {
+      const firstImage = images[0];
+      if (firstImage.base64) {
+        requestBody.image = firstImage.base64;
+      } else if (firstImage.url && !firstImage.url.startsWith('blob:')) {
+        requestBody.image = firstImage.url;
+      } else {
+        return {
+          success: false,
+          error: 'Image base64 data missing — please re-upload the image.',
+        };
+      }
+    }
+
+    const resolvedApiKey = apiKey || process.env.VOLC_API_KEY;
+    if (!resolvedApiKey) {
+      return { success: false, error: 'VOLC_API_KEY is not set in environment variables.' };
+    }
 
     const response = await axios.post(
-      `https://${host}${path}`,
-      body,
+      `${BASE_URL}/images/generations`,
+      requestBody,
       {
         headers: {
-          ...headers,
-          Authorization: authHeader,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${resolvedApiKey}`,
         },
-        params: queries,
+        timeout: 180000,
       }
     );
 
-    const duration = Date.now() - startTime;
-
-    if (response.data.code === 0 || response.data.success) {
+    if (response.data.data?.[0]?.url) {
       return {
-        imageUrl: response.data.data?.image_url || response.data.data?.url,
-        tokens: {
-          input: response.data.data?.usage?.input_tokens || Math.ceil(request.prompt.length / 3) + 100,
-          output: response.data.data?.usage?.output_tokens || 100,
+        success: true,
+        imageUrl: response.data.data[0].url,
+        tokenUsage: {
+          inputTokens: response.data.usage?.input_tokens || estimateTokens(prompt, images?.length || 0),
+          outputTokens: response.data.usage?.output_tokens || 100,
+          totalTokens: response.data.usage?.total_tokens || 0,
         },
-      };
-    } else {
-      return {
-        error: response.data.message || response.data.error || 'Unknown error',
+        raw: response.data,
       };
     }
-  } catch (error: any) {
+
+    if (response.data.data?.[0]?.b64_json) {
+      const b64 = response.data.data[0].b64_json;
+      return {
+        success: true,
+        imageUrl: `data:image/png;base64,${b64}`,
+        tokenUsage: {
+          inputTokens: response.data.usage?.input_tokens || estimateTokens(prompt, images?.length || 0),
+          outputTokens: response.data.usage?.output_tokens || 100,
+          totalTokens: response.data.usage?.total_tokens || 0,
+        },
+        raw: response.data,
+      };
+    }
+
     return {
-      error: error.response?.data?.message || error.message || 'Request failed',
+      success: false,
+      error: `Unexpected response shape: ${JSON.stringify(response.data).slice(0, 200)}`,
+    };
+  } catch (error: any) {
+    if (error.response?.data?.error?.message) {
+      return { success: false, error: error.response.data.error.message };
+    }
+    if (error.response?.status === 401) {
+      return {
+        success: false,
+        error: 'API key authentication failed. Make sure VOLC_API_KEY is set to a valid Ark API Key.',
+      };
+    }
+    if (error.response?.status === 404) {
+      return {
+        success: false,
+        error: `404 Not Found — check the model ID. Response: ${JSON.stringify(error.response?.data || '').slice(0, 300)}`,
+      };
+    }
+    return {
+      success: false,
+      error: error.response?.data
+        ? `HTTP ${error.response.status}: ${JSON.stringify(error.response.data).slice(0, 300)}`
+        : error.message || 'Seedream request failed',
     };
   }
 }
 
-export async function callSeedreamLite(
-  request: SeedreamRequest,
-  config: VolcConfig
-): Promise<{ imageUrl?: string; error?: string; tokens?: { input: number; output: number } }> {
-  const startTime = Date.now();
-  
-  try {
-    const host = 'visual.volcengineapi.com';
-    const path = '/api/v1/seedream5.0/lite';
-    const region = config.region || 'cn-beijing';
-
-    const now = new Date();
-    const xDate = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    const body = JSON.stringify({
-      model: 'seedream5.0-lite',
-      prompt: request.prompt,
-      image_urls: request.images,
-      aspect_ratio: '1:1',
-      return_url: true,
-    });
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      Host: host,
-      'X-Date': xDate,
-    };
-
-    const queries: Record<string, string> = {
-      Action: 'Seedream5.0Lite',
-      Version: '2024-01-01',
-    };
-
-    const signature = signRequest('POST', path, headers, queries, body, config.secretKey);
-    const authHeader = `HMAC-SHA256 Credential=${config.accessKey}/${region}/image_gen/request, SignedHeaders=content-type;host;x-date, Signature=${signature}`;
-
-    const response = await axios.post(
-      `https://${host}${path}`,
-      body,
-      {
-        headers: {
-          ...headers,
-          Authorization: authHeader,
-        },
-        params: queries,
-      }
-    );
-
-    if (response.data.code === 0 || response.data.success) {
-      return {
-        imageUrl: response.data.data?.image_url || response.data.data?.url,
-        tokens: {
-          input: response.data.data?.usage?.input_tokens || Math.ceil(request.prompt.length / 3) + 100,
-          output: response.data.data?.usage?.output_tokens || 100,
-        },
-      };
-    } else {
-      return {
-        error: response.data.message || response.data.error || 'Unknown error',
-      };
-    }
-  } catch (error: any) {
-    return {
-      error: error.response?.data?.message || error.message || 'Request failed',
-    };
-  }
+function estimateTokens(prompt: string, imageCount: number): number {
+  return Math.ceil(prompt.length / 3) + imageCount * 85 + 50;
 }

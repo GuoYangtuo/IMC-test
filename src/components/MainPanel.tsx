@@ -8,63 +8,37 @@ import { ActionButtons } from './ActionButtons';
 import { ResultsPanel } from './ResultsPanel';
 
 export function MainPanel() {
-  const { isLoading } = useStore();
-
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Image Model Comparison Test
-        </h1>
-        <p className="text-gray-600 mt-2">
-          Test and compare image generation models from different providers
-        </p>
-      </div>
+    <div className="flex h-screen overflow-hidden">
+      {/* Left: Controls — 25% */}
+      <aside className="w-[25%] flex-shrink-0 flex flex-col overflow-y-auto border-r border-gray-200 bg-gray-50/50">
+        {/* Image upload */}
+        <section className="p-3 border-b border-gray-200">
+          <ImageUploader />
+        </section>
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        <div className="space-y-6">
-          <section className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Input Images
-            </h2>
-            <ImageUploader />
-          </section>
+        {/* Prompt */}
+        <section className="p-3 border-b border-gray-200">
+          <PromptInput />
+        </section>
 
-          <section className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Prompt
-            </h2>
-            <PromptInput />
-          </section>
+        {/* Model selection */}
+        <section className="p-3 border-b border-gray-200">
+          <ModelSelector />
+        </section>
 
-          <section className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Select Models
-            </h2>
-            <ModelSelector />
-          </section>
-
+        {/* Run button */}
+        <section className="p-3">
           <ActionButtons />
+        </section>
+      </aside>
 
-          {isLoading && (
-            <div className="flex items-center justify-center gap-3 py-4">
-              <div className="loading-spinner" />
-              <span className="text-gray-600">
-                Sending requests to selected models...
-              </span>
-            </div>
-          )}
+      {/* Right: Results — 72% */}
+      <main className="flex-1 overflow-y-auto bg-white">
+        <div className="p-4">
+          <ResultsPanel />
         </div>
-
-        <div className="space-y-6">
-          <section className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              Results
-            </h2>
-            <ResultsPanel />
-          </section>
-        </div>
-      </div>
+      </main>
     </div>
   );
 }

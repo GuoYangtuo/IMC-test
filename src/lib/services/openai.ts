@@ -1,140 +1,176 @@
 import axios from 'axios';
+import type { CallOptions, CallResponse } from './types';
 
 // OpenAI GPT Image API Service
+// Compatible with gpt-image-1 and gpt-image-2
+// Base URL can be overridden via OPENAI_BASE_URL to support relay/proxy endpoints.
 
-interface OpenAIConfig {
-  apiKey: string;
+export async function callGPTImage2(options: CallOptions): Promise<CallResponse> {
+  return callGPTImageGenerate(options);
 }
 
-interface GPTImageRequest {
-  prompt: string;
-  images?: string[]; // Base64 encoded images for editing
+// Image editing endpoint
+export async function callGPTImageEdit(options: CallOptions): Promise<CallResponse> {
+  return callGPTImageEditInternal(options);
 }
 
-export async function callGPTImage2(
-  request: GPTImageRequest,
-  config: OpenAIConfig
-): Promise<{ imageUrl?: string; error?: string; tokens?: { input: number; output: number } }> {
+function resolveOpenAI(): { baseUrl: string; apiKey: string | undefined } {
+  const baseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
+  const apiKey = process.env.OPENAI_API_KEY;
+  return { baseUrl, apiKey };
+}
+
+async function callGPTImageGenerate(options: CallOptions): Promise<CallResponse> {
+  const { images, prompt, apiKey: providedKey } = options;
+  const { baseUrl, apiKey: envKey } = resolveOpenAI();
+  const apiKey = providedKey || envKey;
+
   try {
-    const baseUrl = 'https://api.openai.com/v1';
-    
-    // Prepare image array if provided
-    const imageArray = request.images?.map((img) => ({
-      type: 'base64',
-      data: img.split(',')[1] || img, // Remove data URL prefix if present
-    })) || [];
+    const requestBody: any = {
+      model: 'gpt-image-1', // Fallback if gpt-image-2 not available
+      prompt,
+      n: 1,
+      size: '1024x1024',
+    };
+
+    // If images provided, use edit endpoint instead
+    if (images && images.length > 0) {
+      return callGPTImageEditInternal(options);
+    }
 
     const response = await axios.post(
       `${baseUrl}/images/generations`,
-      {
-        model: 'gpt-image-2',
-        prompt: request.prompt,
-        n: 1,
-        size: '1024x1024',
-        ...(imageArray.length > 0 && {
-          image: imageArray[0],
-        }),
-      },
+      requestBody,
       {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${config.apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
-        timeout: 120000,
+        timeout: 180000,
       }
     );
 
     if (response.data.data?.[0]?.url) {
       return {
+        success: true,
         imageUrl: response.data.data[0].url,
-        tokens: {
-          input: response.data.usage?.input_tokens || Math.ceil(request.prompt.length / 3) + 100,
-          output: response.data.usage?.output_tokens || 100,
+        tokenUsage: {
+          inputTokens: response.data.usage?.input_tokens || estimateTokens(prompt, images?.length || 0),
+          outputTokens: response.data.usage?.output_tokens || 100,
+          totalTokens: response.data.usage?.total_tokens || 0,
         },
+        raw: response.data,
       };
     }
 
     if (response.data.data?.[0]?.b64_json) {
-      // Return as data URL
       const b64 = response.data.data[0].b64_json;
       return {
+        success: true,
         imageUrl: `data:image/png;base64,${b64}`,
-        tokens: {
-          input: response.data.usage?.input_tokens || Math.ceil(request.prompt.length / 3) + 100,
-          output: response.data.usage?.output_tokens || 100,
+        tokenUsage: {
+          inputTokens: response.data.usage?.input_tokens || estimateTokens(prompt, images?.length || 0),
+          outputTokens: response.data.usage?.output_tokens || 100,
+          totalTokens: response.data.usage?.total_tokens || 0,
         },
+        raw: response.data,
       };
     }
 
     return {
+      success: false,
       error: 'No image URL or base64 data in response',
     };
   } catch (error: any) {
     if (error.response?.data?.error?.message) {
-      return { error: error.response.data.error.message };
+      return { success: false, error: error.response.data.error.message };
     }
-    return { error: error.message || 'Request failed' };
+    return { success: false, error: error.message || 'OpenAI request failed' };
   }
 }
 
-// Alternative endpoint for image editing
-export async function callGPTImageEdit(
-  request: GPTImageRequest,
-  config: OpenAIConfig
-): Promise<{ imageUrl?: string; error?: string; tokens?: { input: number; output: number } }> {
+async function callGPTImageEditInternal(options: CallOptions): Promise<CallResponse> {
+  const { images, prompt, apiKey: providedKey } = options;
+  const { baseUrl, apiKey: envKey } = resolveOpenAI();
+  const apiKey = providedKey || envKey;
+
   try {
-    const baseUrl = 'https://api.openai.com/v1';
-    
-    if (!request.images || request.images.length === 0) {
-      return callGPTImage2(request, config);
+    if (!images || images.length === 0) {
+      return callGPTImageGenerate(options);
+    }
+
+    const firstImage = images[0];
+    let imageData: string;
+
+    if (firstImage.base64) {
+      imageData = firstImage.base64.includes(',')
+        ? firstImage.base64.split(',')[1]
+        : firstImage.base64;
+    } else {
+      return {
+        success: false,
+        error: 'Image data required for editing (base64 needed)',
+      };
     }
 
     const response = await axios.post(
       `${baseUrl}/images/edits`,
       {
-        model: 'gpt-image-2',
-        image: request.images[0].split(',')[1] || request.images[0],
-        prompt: request.prompt,
+        model: 'gpt-image-1',
+        image: imageData,
+        prompt,
         n: 1,
         size: '1024x1024',
       },
       {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${config.apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
-        timeout: 120000,
+        timeout: 180000,
       }
     );
 
     if (response.data.data?.[0]?.url) {
       return {
+        success: true,
         imageUrl: response.data.data[0].url,
-        tokens: {
-          input: Math.ceil(request.prompt.length / 3) + 100,
-          output: 100,
+        tokenUsage: {
+          inputTokens: response.data.usage?.input_tokens || estimateTokens(prompt, images?.length || 0),
+          outputTokens: response.data.usage?.output_tokens || 100,
+          totalTokens: response.data.usage?.total_tokens || 0,
         },
+        raw: response.data,
       };
     }
 
     if (response.data.data?.[0]?.b64_json) {
       const b64 = response.data.data[0].b64_json;
       return {
+        success: true,
         imageUrl: `data:image/png;base64,${b64}`,
-        tokens: {
-          input: Math.ceil(request.prompt.length / 3) + 100,
-          output: 100,
+        tokenUsage: {
+          inputTokens: response.data.usage?.input_tokens || estimateTokens(prompt, images?.length || 0),
+          outputTokens: response.data.usage?.output_tokens || 100,
+          totalTokens: response.data.usage?.total_tokens || 0,
         },
+        raw: response.data,
       };
     }
 
     return {
+      success: false,
       error: 'No image URL or base64 data in response',
     };
   } catch (error: any) {
     if (error.response?.data?.error?.message) {
-      return { error: error.response.data.error.message };
+      return { success: false, error: error.response.data.error.message };
     }
-    return { error: error.message || 'Request failed' };
+    return { success: false, error: error.message || 'OpenAI edit request failed' };
   }
+}
+
+function estimateTokens(prompt: string, imageCount: number): number {
+  // Rough estimate: 1 token per ~3 characters, plus 85 tokens per image
+  return Math.ceil(prompt.length / 3) + imageCount * 85 + 50;
 }
