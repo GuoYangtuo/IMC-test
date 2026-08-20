@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+.dropzone {
+  @apply border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-colors;
+}
+
+.dropzone:hover,
+.dropzone.active {
+  @apply border-primary-500 bg-primary-50;
+}
+
+.model-card {
+  @apply border rounded-lg p-4 transition-all;
+}
+
+.model-card.selected {
+  @apply border-primary-500 bg-primary-50 ring-2 ring-primary-500;
+}
+
+.result-card {
+  @apply border rounded-lg overflow-hidden;
+}
+
+.loading-spinner {
+  @apply animate-spin rounded-full h-8 w-8 border-4 border-primary-200 border-t-primary-600;
+}
