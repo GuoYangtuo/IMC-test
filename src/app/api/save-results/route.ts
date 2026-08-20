@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 interface SavePayload {
   results: ModelResult[];
   prompt: string;
+  negativePrompt?: string;
   timestamp: number;
 }
 
@@ -24,7 +25,7 @@ async function fetchImageAsBuffer(url: string): Promise<{ buffer: Buffer; ext: s
 export async function POST(request: NextRequest) {
   try {
     const body: SavePayload = await request.json();
-    const { results, prompt, timestamp } = body;
+    const { results, prompt, negativePrompt, timestamp } = body;
 
     if (!results || !Array.isArray(results) || results.length === 0) {
       return NextResponse.json({ error: 'No results to save' }, { status: 400 });
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest) {
 
     const meta = {
       prompt,
+      negativePrompt: negativePrompt ?? null,
       timestamp,
       totalModels: results.length,
       succeeded: results.filter((r) => r.success).length,

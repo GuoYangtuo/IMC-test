@@ -16,6 +16,13 @@ export const MODELS: ModelInfo[] = [
     description: 'Lightweight version for faster results with good quality',
   },
   {
+    id: 'doubao-seedream-4-5-251128',
+    name: 'Doubao Seedream 4.5',
+    provider: 'bytedance',
+    providerName: 'ByteDance (Volcengine)',
+    description: 'Seedream 4.5 snapshot (2025-11-28) — stable previous-generation release',
+  },
+  {
     id: 'qwen-image-3.0-pro',
     name: 'Qwen Image 3.0 Pro',
     provider: 'alibaba',

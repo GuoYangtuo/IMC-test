@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { CallOptions, CallResponse } from './types';
+import { REQUEST_TIMEOUT_MS } from './config';
 
 // OpenAI GPT Image API Service
 // Compatible with gpt-image-1 and gpt-image-2
@@ -46,7 +47,7 @@ async function callGPTImageGenerate(options: CallOptions): Promise<CallResponse>
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
-        timeout: 180000,
+        timeout: REQUEST_TIMEOUT_MS,
       }
     );
 
@@ -127,7 +128,7 @@ async function callGPTImageEditInternal(options: CallOptions): Promise<CallRespo
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
         },
-        timeout: 180000,
+        timeout: REQUEST_TIMEOUT_MS,
       }
     );
 

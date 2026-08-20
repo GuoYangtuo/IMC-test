@@ -3,6 +3,7 @@ import type { ModelResult, ImageItem, ModelId } from '@/types';
 export interface CallOptions {
   images: ImageItem[];
   prompt: string;
+  negativePrompt?: string;
   modelId: ModelId;
   apiKey?: string;
   [key: string]: any;

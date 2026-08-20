@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { CallOptions, CallResponse } from './types';
+import { REQUEST_TIMEOUT_MS } from './config';
 
 // ByteDance Volcengine Ark — cn-beijing region (国内账户在国内 control panel 创建 key)
 const BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
@@ -7,6 +8,7 @@ const BASE_URL = 'https://ark.cn-beijing.volces.com/api/v3';
 interface SeedreamRequest {
   model: string;
   prompt: string;
+  negative_prompt?: string;
   image?: string; // Base64/data-URI or public URL for image editing
   size?: string; // "1K" | "2K" | "3K" | "4K"
   output_format?: 'png' | 'jpeg';
@@ -17,7 +19,7 @@ interface SeedreamRequest {
 export async function callSeedreamPro(options: CallOptions): Promise<CallResponse> {
   return callSeedream({
     ...options,
-    model: 'doubao-seedream-5-0-260128',
+    model: 'doubao-seedream-5-0-pro-260628',
     size: '2K',
   });
 }
@@ -25,7 +27,15 @@ export async function callSeedreamPro(options: CallOptions): Promise<CallRespons
 export async function callSeedreamLite(options: CallOptions): Promise<CallResponse> {
   return callSeedream({
     ...options,
-    model: 'doubao-seedream-5-0-lite-260128',
+    model: 'doubao-seedream-5-0-260128',
+    size: '2K',
+  });
+}
+
+export async function callSeedream45(options: CallOptions): Promise<CallResponse> {
+  return callSeedream({
+    ...options,
+    model: 'doubao-seedream-4-5-251128',
     size: '2K',
   });
 }
@@ -33,7 +43,7 @@ export async function callSeedreamLite(options: CallOptions): Promise<CallRespon
 async function callSeedream(
   options: CallOptions & { model: string; size?: string }
 ): Promise<CallResponse> {
-  const { images, prompt, model, size, apiKey } = options;
+  const { images, prompt, negativePrompt, model, size, apiKey } = options;
 
   try {
     const requestBody: SeedreamRequest = {
@@ -43,6 +53,10 @@ async function callSeedream(
       watermark: false,
       output_format: 'png',
     };
+
+    if (typeof negativePrompt === 'string' && negativePrompt.trim() !== '') {
+      requestBody.negative_prompt = negativePrompt;
+    }
 
     if (size) {
       requestBody.size = size;
@@ -76,7 +90,7 @@ async function callSeedream(
           'Content-Type': 'application/json',
           Authorization: `Bearer ${resolvedApiKey}`,
         },
-        timeout: 180000,
+        timeout: REQUEST_TIMEOUT_MS,
       }
     );
 

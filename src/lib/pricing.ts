@@ -13,6 +13,10 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     inputCostPer1K: 0.0015,
     outputCostPer1K: 0.0075,
   },
+  'doubao-seedream-4-5-251128': {
+    inputCostPer1K: 0.0025,
+    outputCostPer1K: 0.0125,
+  },
   'qwen-image-3.0-pro': {
     inputCostPer1K: 0.0035,
     outputCostPer1K: 0.0175,

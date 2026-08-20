@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { CallOptions, CallResponse } from './types';
+import { REQUEST_TIMEOUT_MS } from './config';
 
 // Alibaba Cloud DashScope Qwen Image 3.0 API Service
 // Endpoint: https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation
@@ -20,6 +21,7 @@ interface QwenImageRequest {
     watermark?: boolean;
     seed?: number;
     output_size?: string;
+    negative_prompt?: string;
   };
 }
 
@@ -35,7 +37,7 @@ export async function callQwenImageProSync(options: CallOptions): Promise<CallRe
 }
 
 async function callQwenImage(options: CallOptions & { model: string }): Promise<CallResponse> {
-  const { images, prompt, model, apiKey } = options;
+  const { images, prompt, negativePrompt, model, apiKey } = options;
 
   try {
     // International endpoint (Singapore region) — works with sk-ws-H.* keys
@@ -81,6 +83,13 @@ async function callQwenImage(options: CallOptions & { model: string }): Promise<
       },
     };
 
+    if (typeof negativePrompt === 'string' && negativePrompt.trim() !== '') {
+      requestBody.parameters = {
+        ...requestBody.parameters,
+        negative_prompt: negativePrompt,
+      };
+    }
+
     const response = await axios.post(
       `${baseUrl}/services/aigc/multimodal-generation/generation`,
       requestBody,
@@ -89,7 +98,7 @@ async function callQwenImage(options: CallOptions & { model: string }): Promise<
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey || process.env.DASHSCOPE_API_KEY || process.env.ALIBABA_API_KEY}`,
         },
-        timeout: 180000,
+        timeout: REQUEST_TIMEOUT_MS,
       }
     );
 

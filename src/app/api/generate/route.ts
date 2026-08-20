@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const { images, prompt, selectedModels } = body;
+  const { images, prompt, negativePrompt, selectedModels } = body;
 
   if (!images || images.length === 0) {
     return new Response(JSON.stringify({ error: 'No images provided' }), {
@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
             const response = await service({
               modelId,
               prompt,
+              negativePrompt,
               images,
             });
 

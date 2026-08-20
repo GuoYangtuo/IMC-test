@@ -13,6 +13,7 @@ export function ActionButtons() {
     selectedModels,
     images,
     prompt,
+    negativePrompt,
     isLoading,
     setIsLoading,
     clearResults,
@@ -40,6 +41,7 @@ export function ActionButtons() {
         body: JSON.stringify({
           images: sanitizeImages(images),
           prompt,
+          negativePrompt: negativePrompt.trim() ? negativePrompt : undefined,
           selectedModels,
         }),
       });
@@ -95,7 +97,7 @@ export function ActionButtons() {
         fetch('/api/save-results', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ results, prompt, timestamp: Date.now() }),
+          body: JSON.stringify({ results, prompt, negativePrompt: useStore.getState().negativePrompt, timestamp: Date.now() }),
         }).catch((err) => console.warn('Failed to save results:', err));
       }
     }

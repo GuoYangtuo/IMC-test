@@ -13,6 +13,10 @@ interface AppState {
   prompt: string;
   setPrompt: (prompt: string) => void;
 
+  // Negative Prompt
+  negativePrompt: string;
+  setNegativePrompt: (negativePrompt: string) => void;
+
   // Selected Models
   selectedModels: ModelId[];
   toggleModel: (modelId: ModelId) => void;
@@ -47,6 +51,7 @@ interface AppState {
 const DEFAULT_MODELS: ModelId[] = [
   'seedream-5.0-pro',
   'seedream-5.0-lite',
+  'doubao-seedream-4-5-251128',
   'qwen-image-3.0-pro',
   'gpt-image-2.0',
 ];
@@ -65,6 +70,10 @@ export const useStore = create<AppState>()(
       // Prompt
       prompt: '',
       setPrompt: (prompt) => set({ prompt }),
+
+      // Negative Prompt
+      negativePrompt: '',
+      setNegativePrompt: (negativePrompt) => set({ negativePrompt }),
 
       // Selected Models
       selectedModels: DEFAULT_MODELS,
@@ -128,14 +137,15 @@ export const useStore = create<AppState>()(
           // `file` (File instance) is intentionally dropped — base64 is enough.
         })),
         prompt: state.prompt,
+        negativePrompt: state.negativePrompt,
         selectedModels: state.selectedModels,
       }),
-      // After rehydration, regenerate blob URLs from base64 so thumbnails
-      // still render after a refresh.
+      // After rehydration, swap any persisted blob URLs (which are invalid
+      // after a refresh) with the base64 data URI so thumbnails still render.
       onRehydrateStorage: () => (state) => {
         if (!state) return;
         state.images = state.images.map((img) => {
-          if (!img.url && img.base64) {
+          if (img.base64 && (!img.url || img.url.startsWith('blob:'))) {
             return { ...img, url: img.base64 };
           }
           return img;
