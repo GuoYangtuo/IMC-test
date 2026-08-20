@@ -98,7 +98,9 @@ export function ActionButtons() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ results, prompt, negativePrompt: useStore.getState().negativePrompt, timestamp: Date.now() }),
-        }).catch((err) => console.warn('Failed to save results:', err));
+        })
+          .then(() => useStore.getState().bumpHistoryVersion())
+          .catch((err) => console.warn('Failed to save results:', err));
       }
     }
   };

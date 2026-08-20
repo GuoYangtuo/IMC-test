@@ -46,6 +46,10 @@ interface AppState {
   runningModels: ModelId[];
   addRunningModel: (modelId: ModelId) => void;
   removeRunningModel: (modelId: ModelId) => void;
+
+  // Bumps whenever a run is saved to disk — components can watch this to refresh.
+  historyVersion: number;
+  bumpHistoryVersion: () => void;
 }
 
 const DEFAULT_MODELS: ModelId[] = [
@@ -123,6 +127,9 @@ export const useStore = create<AppState>()(
         set((state) => ({
           runningModels: state.runningModels.filter((id) => id !== modelId),
         })),
+
+      historyVersion: 0,
+      bumpHistoryVersion: () => set((state) => ({ historyVersion: state.historyVersion + 1 })),
     }),
     {
       name: 'imc-test-store',

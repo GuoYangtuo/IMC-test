@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Clock, Coins, AlertCircle, CheckCircle, Loader2, History } from 'lucide-react';
+import { Clock, Coins, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { getModelInfo } from '@/lib/models';
 import { formatDuration, formatCost, formatTokens } from '@/lib/utils';
@@ -206,15 +206,6 @@ export function ResultsPanel() {
           }
           return null;
         })}
-      </div>
-
-      {/* History */}
-      <div className="pt-6 mt-6 border-t border-gray-200">
-        <div className="flex items-center gap-2 mb-3">
-          <History className="w-4 h-4 text-gray-500" />
-          <h2 className="text-sm font-semibold text-gray-700">History</h2>
-        </div>
-        <HistoryPanel />
       </div>
     </div>
   );

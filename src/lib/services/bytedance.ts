@@ -37,13 +37,28 @@ export async function callSeedream45(options: CallOptions): Promise<CallResponse
     ...options,
     model: 'doubao-seedream-4-5-251128',
     size: '2K',
+    modelOpts: {
+      supportsOutputFormat: false,
+      supportsNegativePrompt: true,
+    },
   });
 }
 
+interface SeedreamModelOptions {
+  outputFormat?: 'png' | 'jpeg';
+  supportsNegativePrompt?: boolean;
+  supportsOutputFormat?: boolean; // some models (e.g. 4.5) don't accept this field
+}
+
 async function callSeedream(
-  options: CallOptions & { model: string; size?: string }
+  options: CallOptions & { model: string; size?: string; modelOpts?: SeedreamModelOptions }
 ): Promise<CallResponse> {
-  const { images, prompt, negativePrompt, model, size, apiKey } = options;
+  const { images, prompt, negativePrompt, model, size, apiKey, modelOpts = {} } = options;
+  const {
+    outputFormat = 'png',
+    supportsNegativePrompt = true,
+    supportsOutputFormat = true,
+  } = modelOpts;
 
   try {
     const requestBody: SeedreamRequest = {
@@ -51,10 +66,13 @@ async function callSeedream(
       prompt,
       response_format: 'url',
       watermark: false,
-      output_format: 'png',
     };
 
-    if (typeof negativePrompt === 'string' && negativePrompt.trim() !== '') {
+    if (supportsOutputFormat) {
+      requestBody.output_format = outputFormat;
+    }
+
+    if (supportsNegativePrompt && typeof negativePrompt === 'string' && negativePrompt.trim() !== '') {
       requestBody.negative_prompt = negativePrompt;
     }
 
