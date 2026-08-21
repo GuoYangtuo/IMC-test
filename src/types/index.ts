@@ -7,7 +7,10 @@ export type ModelId =
   | 'doubao-seedream-4-5-251128'
   | 'qwen-image-3.0-pro'
   | 'gpt-image-2.0'
-  | 'nano-banana-2';
+  | 'nano-banana-2'
+  | 'mai-image-2.5-pro'
+  | 'flux-2-max'
+  | 'grok-imagine-image-2';
 
 export interface ModelInfo {
   id: ModelId;

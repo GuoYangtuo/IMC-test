@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { History, CheckCircle, XCircle, Loader2, Coins, AlertCircle, X, Trash2 } from 'lucide-react';
+import { History, CheckCircle, XCircle, Loader2, Coins, AlertCircle, X, Trash2, ExternalLink } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { getModelInfo } from '@/lib/models';
 import { formatDuration, formatCost, formatTokens } from '@/lib/utils';
@@ -206,6 +206,14 @@ export function HistoryPanel() {
       <div className="flex items-center gap-2 mb-3">
         <History className="w-4 h-4 text-gray-500" />
         <h2 className="text-sm font-semibold text-gray-700">History</h2>
+        <a
+          href="/history"
+          className="ml-auto flex items-center gap-1 px-2 py-1 text-[11px] text-gray-500 hover:text-primary-600 hover:bg-primary-50 border border-gray-200 hover:border-primary-200 rounded-md transition-colors"
+          title="Open full history page"
+        >
+          View all
+          <ExternalLink className="w-3 h-3" />
+        </a>
       </div>
 
       {loading ? (

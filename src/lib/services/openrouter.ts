@@ -16,6 +16,18 @@ export async function callQwenImage3Pro(options: CallOptions): Promise<CallRespo
   return callOpenRouterImage(options, 'qwen/qwen-image-3-pro');
 }
 
+export async function callMaiImage25Pro(options: CallOptions): Promise<CallResponse> {
+  return callOpenRouterImage(options, 'microsoft/mai-image-2.5-pro');
+}
+
+export async function callFlux2Max(options: CallOptions): Promise<CallResponse> {
+  return callOpenRouterImage(options, 'black-forest-labs/flux.2-max');
+}
+
+export async function callGrokImagineImage2(options: CallOptions): Promise<CallResponse> {
+  return callOpenRouterImage(options, 'x-ai/grok-imagine-image-2.0');
+}
+
 async function callOpenRouterImage(options: CallOptions, modelSlug: string): Promise<CallResponse> {
   const apiKey = options.apiKey || process.env.OPENROUTER_API_KEY;
 

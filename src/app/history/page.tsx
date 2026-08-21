@@ -33,6 +33,9 @@ const ALL_MODELS = [
   'seedream-5.0-lite',
   'doubao-seedream-4-5-251128',
   'nano-banana-2',
+  'mai-image-2.5-pro',
+  'flux-2-max',
+  'grok-imagine-image-2',
 ];
 
 function localTime(ts: number) {

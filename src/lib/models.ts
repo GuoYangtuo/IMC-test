@@ -43,6 +43,27 @@ export const MODELS: ModelInfo[] = [
     providerName: 'OpenRouter (Google)',
     description: 'Gemini 3.1 Flash Image — fast, cost-efficient image generation',
   },
+  {
+    id: 'mai-image-2.5-pro',
+    name: 'MAI Image 2.5 Pro',
+    provider: 'openrouter',
+    providerName: 'OpenRouter (Microsoft)',
+    description: 'Microsoft Azure AI Foundry — photorealistic and artistic image generation',
+  },
+  {
+    id: 'flux-2-max',
+    name: 'FLUX.2 Max',
+    provider: 'openrouter',
+    providerName: 'OpenRouter (Black Forest Labs)',
+    description: 'Black Forest Labs — high-quality image generation with 46k token context',
+  },
+  {
+    id: 'grok-imagine-image-2',
+    name: 'Grok Imagine Image 2.0',
+    provider: 'openrouter',
+    providerName: 'OpenRouter (x-ai)',
+    description: 'x-ai Grok Imagine Image 2.0 — fast, high-quality image generation',
+  },
 ];
 
 export const getModelInfo = (modelId: string): ModelInfo | undefined => {

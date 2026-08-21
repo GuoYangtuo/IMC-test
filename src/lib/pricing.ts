@@ -25,6 +25,22 @@ export const MODEL_PRICING: Record<string, ModelPricing> = {
     inputCostPer1K: 0.005,
     outputCostPer1K: 0.025,
   },
+  'nano-banana-2': {
+    inputCostPer1K: 0.002,
+    outputCostPer1K: 0.01,
+  },
+  'mai-image-2.5-pro': {
+    inputCostPer1K: 0.005,
+    outputCostPer1K: 0.025,
+  },
+  'flux-2-max': {
+    inputCostPer1K: 0.07,
+    outputCostPer1K: 0,
+  },
+  'grok-imagine-image-2': {
+    inputCostPer1K: 0.005,
+    outputCostPer1K: 0.025,
+  },
 };
 
 export function calculateCost(
